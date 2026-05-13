@@ -92,4 +92,12 @@ public interface OrderMapper {
      * @return
      */
     List<Orders> queryAnomalyOrders(OrderAnomalyQueryDTO orderAnomalyQueryDTO);
+
+    /**
+     * 统计指定时间区间内商品的销售额（按商品分组）
+     * @param begin 开始时间
+     * @param end 结束时间
+     * @return 商品销售统计列表
+     */
+    List<GoodsSalesDTO> getSalesAmountTop10(LocalDateTime begin, LocalDateTime end);
 }

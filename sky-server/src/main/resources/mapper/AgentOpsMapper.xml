@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.sky.mapper.AgentOpsMapper">
+
+    <!-- 统计总订单数 -->
+    <select id="countTotalOrders" resultType="java.lang.Integer">
+        SELECT COUNT(id)
+        FROM orders
+        WHERE order_time &gt;= #{begin}
+          AND order_time &lt; #{end}
+    </select>
+
+    <!-- 统计有效订单数（已完成） -->
+    <select id="countValidOrders" resultType="java.lang.Integer">
+        SELECT COUNT(id)
+        FROM orders
+        WHERE status = 5
+          AND order_time &gt;= #{begin}
+          AND order_time &lt; #{end}
+    </select>
+
+    <!-- 统计取消订单数 -->
+    <select id="countCancelledOrders" resultType="java.lang.Integer">
+        SELECT COUNT(id)
+        FROM orders
+        WHERE status = 6
+          AND order_time &gt;= #{begin}
+          AND order_time &lt; #{end}
+    </select>
+
+    <!-- 统计营业额（已完成订单的金额总和） -->
+    <select id="sumTurnover" resultType="java.math.BigDecimal">
+        SELECT IFNULL(SUM(amount), 0)
+        FROM orders
+        WHERE status = 5
+          AND order_time &gt;= #{begin}
+          AND order_time &lt; #{end}
+    </select>
+
+    <!-- 统计新增用户数 -->
+    <select id="countNewUsers" resultType="java.lang.Integer">
+        SELECT COUNT(id)
+        FROM `user`
+        WHERE create_time &gt;= #{begin}
+          AND create_time &lt; #{end}
+    </select>
+
+    <!-- 查询热销商品列表 -->
+    <select id="selectTopSalesItems" resultType="com.sky.vo.TopSalesItemVO">
+        SELECT
+            od.name AS itemName,
+            SUM(od.number) AS salesCount,
+            IFNULL(SUM(od.amount), 0) AS salesAmount
+        FROM order_detail od
+        INNER JOIN orders o ON od.order_id = o.id
+        WHERE o.status = 5
+          AND o.order_time &gt;= #{begin}
+          AND o.order_time &lt; #{end}
+        GROUP BY od.name
+        ORDER BY salesCount DESC, salesAmount DESC
+        LIMIT #{limit}
+    </select>
+
+</mapper>

@@ -112,6 +112,22 @@
         limit 0,10
     </select>
 
+    <!-- 统计指定时间区间内商品的销售额（按商品分组） -->
+    <select id="getSalesAmountTop10" resultType="com.sky.dto.GoodsSalesDTO">
+        select od.name, sum(od.amount) amount
+        from order_detail od,orders o
+        where od.order_id = o.id and o.status = 5
+        <if test="begin != null">
+            and o.order_time &gt; #{begin}
+        </if>
+        <if test="end != null">
+            and o.order_time &lt; #{end}
+        </if>
+        group by od.name
+        order by amount desc
+        limit 0,10
+    </select>
+
     <!-- 查询异常订单列表（原始订单数据） -->
     <select id="queryAnomalyOrders" resultType="com.sky.entity.Orders">
         SELECT
