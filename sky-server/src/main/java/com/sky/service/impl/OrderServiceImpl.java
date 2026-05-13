@@ -21,6 +21,7 @@ import com.sky.vo.OrderPaymentVO;
 import com.sky.vo.OrderStatisticsVO;
 import com.sky.vo.OrderSubmitVO;
 import com.sky.vo.OrderVO;
+import com.sky.vo.OrderAnomalyVO;
 import com.sky.websocket.WebSocketServer;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -608,5 +609,108 @@ public class OrderServiceImpl implements OrderService {
 
         //通过websocket向客户端浏览器推送消息
         webSocketServer.sendToAllClient(JSON.toJSONString(map));
+    }
+
+    /**
+     * 查询异常订单列表
+     * @param orderAnomalyQueryDTO
+     * @return
+     */
+    public List<OrderAnomalyVO> queryAnomalies(OrderAnomalyQueryDTO orderAnomalyQueryDTO) {
+        // 1. 从 Mapper 获取原始异常订单数据
+        List<Orders> anomalyOrders = orderMapper.queryAnomalyOrders(orderAnomalyQueryDTO);
+        
+        // 2. 遍历订单，根据业务规则组装 OrderAnomalyVO
+        List<OrderAnomalyVO> result = new ArrayList<>();
+        LocalDateTime now = LocalDateTime.now();
+        
+        for (Orders order : anomalyOrders) {
+            OrderAnomalyVO vo = buildOrderAnomalyVO(order, orderAnomalyQueryDTO, now);
+            result.add(vo);
+        }
+        
+        return result;
+    }
+    
+    /**
+     * 构建订单异常VO对象
+     * @param order 原始订单数据
+     * @param queryDTO 查询参数
+     * @param now 当前时间
+     * @return OrderAnomalyVO
+     */
+    private OrderAnomalyVO buildOrderAnomalyVO(Orders order, OrderAnomalyQueryDTO queryDTO, LocalDateTime now) {
+        OrderAnomalyVO vo = new OrderAnomalyVO();
+        
+        // 基础字段复制
+        vo.setOrderId(order.getId());
+        vo.setOrderNumber(order.getNumber());
+        vo.setStatus(order.getStatus());
+        vo.setAmount(order.getAmount());
+        vo.setOrderTime(order.getOrderTime());
+        vo.setCheckoutTime(order.getCheckoutTime());
+        vo.setEstimatedDeliveryTime(order.getEstimatedDeliveryTime());
+        
+        // 设置状态名称
+        vo.setStatusName(getStatusName(order.getStatus()));
+        
+        // 根据订单状态和规则判断异常类型、严重程度、原因和建议
+        if (order.getStatus() == Orders.TO_BE_CONFIRMED && order.getCheckoutTime() != null) {
+            long minutes = java.time.Duration.between(order.getCheckoutTime(), now).toMinutes();
+            if (minutes > queryDTO.getUnconfirmedMinutes()) {
+                vo.setAnomalyType("未确认超时");
+                vo.setSeverity("高");
+                vo.setReason(String.format("订单已支付但超过%d分钟未确认", queryDTO.getUnconfirmedMinutes()));
+                vo.setSuggestion("请及时确认订单或联系用户");
+                vo.setDelayMinutes(minutes);
+            }
+        } else if (order.getStatus() == Orders.CONFIRMED && order.getOrderTime() != null) {
+            long minutes = java.time.Duration.between(order.getOrderTime(), now).toMinutes();
+            if (minutes > queryDTO.getConfirmedMinutes()) {
+                vo.setAnomalyType("已确认超时");
+                vo.setSeverity("中");
+                vo.setReason(String.format("订单已确认但超过%d分钟未配送", queryDTO.getConfirmedMinutes()));
+                vo.setSuggestion("请尽快安排配送或更新状态");
+                vo.setDelayMinutes(minutes);
+            }
+        } else if (order.getStatus() == Orders.DELIVERY_IN_PROGRESS && order.getEstimatedDeliveryTime() != null) {
+            if (order.getEstimatedDeliveryTime().isBefore(now)) {
+                long minutes = java.time.Duration.between(order.getEstimatedDeliveryTime(), now).toMinutes();
+                vo.setAnomalyType("配送超时");
+                vo.setSeverity("高");
+                vo.setReason(String.format("订单预计送达时间已过，延迟%d分钟", minutes));
+                vo.setSuggestion("请立即处理配送并联系用户说明情况");
+                vo.setDelayMinutes(minutes);
+            }
+        }
+        
+        return vo;
+    }
+    
+    /**
+     * 获取订单状态名称
+     * @param status 订单状态
+     * @return 状态名称
+     */
+    private String getStatusName(Integer status) {
+        if (status == null) {
+            return "未知状态";
+        }
+        switch (status) {
+            case 1:
+                return "待付款";
+            case 2:
+                return "待接单";
+            case 3:
+                return "已接单";
+            case 4:
+                return "派送中";
+            case 5:
+                return "已完成";
+            case 6:
+                return "已取消";
+            default:
+                return "未知状态";
+        }
     }
 }

@@ -111,4 +111,50 @@
         order by number desc
         limit 0,10
     </select>
+
+    <!-- 查询异常订单列表（原始订单数据） -->
+    <select id="queryAnomalyOrders" resultType="com.sky.entity.Orders">
+        SELECT
+            o.id,
+            o.number,
+            o.status,
+            o.user_id AS userId,
+            o.address_book_id AS addressBookId,
+            o.order_time AS orderTime,
+            o.checkout_time AS checkoutTime,
+            o.pay_method AS payMethod,
+            o.pay_status AS payStatus,
+            o.amount,
+            o.remark,
+            o.user_name AS userName,
+            o.phone,
+            o.address,
+            o.consignee,
+            o.cancel_reason AS cancelReason,
+            o.rejection_reason AS rejectionReason,
+            o.cancel_time AS cancelTime,
+            o.estimated_delivery_time AS estimatedDeliveryTime,
+            o.delivery_status AS deliveryStatus,
+            o.delivery_time AS deliveryTime,
+            o.pack_amount AS packAmount,
+            o.tableware_number AS tablewareNumber,
+            o.tableware_status AS tablewareStatus
+        FROM orders o
+        WHERE
+            (
+                (o.status = 2 AND o.checkout_time IS NOT NULL AND TIMESTAMPDIFF(MINUTE, o.checkout_time, NOW()) > #{unconfirmedMinutes})
+                OR
+                (o.status = 3 AND o.order_time IS NOT NULL AND TIMESTAMPDIFF(MINUTE, o.order_time, NOW()) > #{confirmedMinutes})
+                OR
+                (o.status = 4 AND o.estimated_delivery_time IS NOT NULL AND o.estimated_delivery_time &lt; NOW())
+            )
+        ORDER BY
+            CASE
+                WHEN o.status = 2 AND o.checkout_time IS NOT NULL AND TIMESTAMPDIFF(MINUTE, o.checkout_time, NOW()) > #{unconfirmedMinutes} THEN 1
+                WHEN o.status = 4 AND o.estimated_delivery_time IS NOT NULL AND o.estimated_delivery_time &lt; NOW() THEN 2
+                WHEN o.status = 3 AND o.order_time IS NOT NULL AND TIMESTAMPDIFF(MINUTE, o.order_time, NOW()) > #{confirmedMinutes} THEN 3
+                ELSE 4
+            END,
+            o.order_time DESC
+    </select>
 </mapper>

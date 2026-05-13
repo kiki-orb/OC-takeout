@@ -2,8 +2,10 @@ package com.sky.mapper;
 
 import com.github.pagehelper.Page;
 import com.sky.dto.GoodsSalesDTO;
+import com.sky.dto.OrderAnomalyQueryDTO;
 import com.sky.dto.OrdersPageQueryDTO;
 import com.sky.entity.Orders;
+import com.sky.vo.OrderAnomalyVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Select;
 import java.time.LocalDateTime;
@@ -83,4 +85,11 @@ public interface OrderMapper {
      * @return
      */
     List<GoodsSalesDTO> getSalesTop10(LocalDateTime begin,LocalDateTime end);
+
+    /**
+     * 查询异常订单列表（原始订单数据）
+     * @param orderAnomalyQueryDTO
+     * @return
+     */
+    List<Orders> queryAnomalyOrders(OrderAnomalyQueryDTO orderAnomalyQueryDTO);
 }

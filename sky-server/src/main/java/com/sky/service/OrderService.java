@@ -2,10 +2,13 @@ package com.sky.service;
 
 import com.sky.dto.*;
 import com.sky.result.PageResult;
+import com.sky.vo.OrderAnomalyVO;
 import com.sky.vo.OrderPaymentVO;
 import com.sky.vo.OrderStatisticsVO;
 import com.sky.vo.OrderSubmitVO;
 import com.sky.vo.OrderVO;
+
+import java.util.List;
 
 public interface OrderService {
     /**
@@ -109,4 +112,11 @@ public interface OrderService {
      * @param id
      */
     void reminder(Long id);
+
+    /**
+     * 查询异常订单列表
+     * @param orderAnomalyQueryDTO
+     * @return
+     */
+    List<OrderAnomalyVO> queryAnomalies(OrderAnomalyQueryDTO orderAnomalyQueryDTO);
 }
